@@ -194,6 +194,17 @@ class Commands(object):
             "F": CommandParameter("F", CommandParameter.parse_float_positive, 7)
         }
     )
+    '''
+    G4 = Command(
+        "G4",
+        "Dwell",
+        "G4 - Dwell <P{msec}> <S(sec)> <P{sec (grbl)}>",
+        parameters={
+            "P": CommandParameter("P", CommandParameter.parse_float, 1),
+            "S": CommandParameter("S", CommandParameter.parse_float, 2)            
+        }
+    )
+    '''
     G10 = Command(
         "G10",
         "Retract"
@@ -342,7 +353,16 @@ class Commands(object):
             "R": CommandParameter("R", CommandParameter.parse_float, 2)
         }
     )
-
+    '''
+    M110 = Command(
+        "M110",
+        "Set line number",
+        display_template="M110 - Set Line Number: N={N}",
+        parameters={
+            "N": CommandParameter("N", CommandParameter.parse_float, 1)
+        }
+    )
+    '''
     M114 = Command(
         "M114",
         "Get position"
@@ -467,6 +487,7 @@ class Commands(object):
             G1.Command: G1,
             G2.Command: G2,
             G3.Command: G3,
+            #G4.Command: G4,
             G10.Command: G10,
             G11.Command: G11,
             G20.Command: G20,
@@ -486,6 +507,7 @@ class Commands(object):
             M105.Command: M105,
             M106.Command: M106,
             M109.Command: M109,
+            #M110.Command: M110,
             M114.Command: M114,
             M116.Command: M116,
             M140.Command: M140,
@@ -604,7 +626,7 @@ class Commands(object):
         # get the command letter
         command_letter = gcode[0].upper()
         if command_letter not in Commands.GcodeWords:
-            return ParsedCommand(None, None, original_gcode)
+            return ParsedCommand(None, None, original_gcode)#, error=str("Gcode not a valid Gcode Word: "+command_letter))
 
         # search for decimals or periods to build the command address
         command_address = ""
@@ -626,7 +648,6 @@ class Commands(object):
                     command_address += c
                     has_seen_period = True
                 else:
-
                     return ParsedCommand(None, None, original_gcode, error="Cannot parse the gcode address, multiple periods "
                                                                   "seen.")
             else:
@@ -638,6 +659,7 @@ class Commands(object):
                 command_address = str(address_number)
             else:
                 command_address = '?'
+
         # make sure the command is in the dictionary
         command_to_search = command_letter + command_address
         if command_to_search not in Commands.CommandsDictionary.keys():
@@ -657,7 +679,26 @@ class Commands(object):
             except ValueError as e:
                 ParsedCommand(command_to_search, None, original_gcode, error=str(e))
         return ParsedCommand(command_to_search, parameters, original_gcode)
-
+                
+        '''
+        # get the parameter string
+        if len(gcode) > index:
+            parameters = gcode[index:]
+        else:
+            parameters = ""                            
+        # make sure the command is in the dictionary
+        command_to_search = command_letter + command_address
+        if command_to_search in Commands.CommandsDictionary.keys():           
+            cmd = Commands.CommandsDictionary[command_to_search]
+            if not cmd.TextOnlyParameter:
+                try:
+                    parameters = cmd.parse_parameters(parameters)
+                except ValueError as e:
+                    return ParsedCommand(command_to_search, None, original_gcode, error=str("Parameter value not valid: "+e))
+        if command_to_search not in Commands.CommandsDictionary.keys():
+            return ParsedCommand(command_to_search, parameters, original_gcode)#, error=str("Gcode not in dictionary of octolapse: "+command_to_search +" "+parameters))                
+        return ParsedCommand(command_to_search, parameters, original_gcode)
+        '''
     @staticmethod
     def to_string(parsed_command):
         if parsed_command.cmd is None:
